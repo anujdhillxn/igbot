@@ -1,0 +1,31 @@
+{
+    "name": "igbot",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "build": "npx tsc",
+        "start": "node dist/index.js",
+        "dev": "nodemon src/index.ts"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "axios": "^1.4.0",
+        "canvas": "^2.11.2",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "image-ssim": "^0.2.0",
+        "mongoose": "^6.9.0",
+        "puppeteer": "^20.7.4",
+        "sharp": "^0.32.1",
+        "ssim.js": "^3.5.0"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.17",
+        "@types/node": "^18.11.19",
+        "nodemon": "^2.0.20",
+        "typescript": "^4.9.5"
+    }
+}
