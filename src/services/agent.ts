@@ -519,6 +519,7 @@ export const scrapePosts = async (
                                 tag.getAttribute("src")
                             );
                             if (imageUrl) {
+                                logger.info("Downloading from", imageUrl);
                                 const imageBlob = await downloadImage(imageUrl);
                                 const imageName = randomUUID();
                                 if (
@@ -544,8 +545,7 @@ export const scrapePosts = async (
                             }
                         } catch (e) {
                             logger.info(
-                                "Image not found. Skipping to next article.",
-                                e
+                                "Image not found. Skipping to next article."
                             );
                         }
                     }
