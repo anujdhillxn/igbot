@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { IAccount } from "../types/model";
 import Account from "../models/account";
 import {
+    getSnapshot,
     postImages,
     postVideo,
     scrapePosts,
@@ -85,6 +86,10 @@ router.post("/scrapePosts", async (req: Request, res: Response) => {
     res.status(200).json(
         await scrapePosts(req.app.locals.agents, req.body.username)
     );
+});
+
+router.get("/snapshot/:username", async (req: Request, res: Response) => {
+    res.send(await getSnapshot(req.app.locals.agents, req.params.username));
 });
 
 export default router;

@@ -573,3 +573,20 @@ export const scrapePosts = async (
         };
     }
 };
+
+export const getSnapshot = async (
+    agents: Record<string, IAgent>,
+    username: string
+): Promise<Buffer> => {
+    try {
+        if (!(username in agents)) {
+            return Buffer.from("");
+        }
+    } catch (e) {
+        return Buffer.from("");
+    }
+    const { browser } = agents[username];
+    const [page] = await browser.pages();
+    const snapshot = await page.screenshot();
+    return snapshot;
+};
