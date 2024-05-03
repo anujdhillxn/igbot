@@ -1,7 +1,19 @@
 import mongoose from "mongoose";
-import { IAccount } from "../types/model";
+import { IAccount, IAccountModel, IImageMeta } from "../types/model";
 
-const accountSchema = new mongoose.Schema({
+const imageMetaSchema: mongoose.Schema<IImageMeta> = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+    },
+    posted: {
+        type: Boolean,
+        required: true,
+        default: false,
+    },
+});
+
+const accountSchema: mongoose.Schema<IAccount> = new mongoose.Schema({
     username: {
         type: String,
         required: true,
@@ -15,12 +27,12 @@ const accountSchema = new mongoose.Schema({
         required: true,
         default: false,
     },
-    postedImages: {
-        type: [String],
+    images: {
+        type: [imageMetaSchema],
         required: true,
         default: [],
     },
-    postedVideos: {
+    videos: {
         type: [String],
         required: true,
         default: [],
@@ -31,4 +43,7 @@ const accountSchema = new mongoose.Schema({
         default: "",
     },
 });
-export default mongoose.model<IAccount>("Account", accountSchema);
+export default mongoose.model<IAccount, IAccountModel>(
+    "Account",
+    accountSchema
+);

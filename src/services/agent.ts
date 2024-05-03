@@ -1,23 +1,32 @@
 import { ElementHandle } from "puppeteer";
 import { AgentStatus, IAgent, IMessage } from "../types/logic";
 import {
-    IMAGES_DIR,
+    MAX_FOLDER_SIZE,
     VIDEOS_DIR,
-    deleteFiles,
-    downloadImage,
     downloadVideo,
     getVideoName,
-    matchesOldImage,
     matchesOldVideo,
     randomIntegerBetween,
     sleep,
 } from "./utils";
-import puppeteer from "puppeteer";
-import { readdirSync } from "fs";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import AdblockerPlugin from "puppeteer-extra-plugin-adblocker";
+puppeteer.use(StealthPlugin());
+puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
+import * as fs from "fs";
 import * as path from "path";
 import { editAccount, findAccount } from "./account";
 import { randomUUID } from "crypto";
 import { generateCaption } from "./text";
+import {
+    downloadImage,
+    getImage,
+    IMAGES_DIR,
+    insertImage,
+    matchesAnyImage,
+} from "./image";
+import { getLogger } from "./logger";
 
 export const setAgentProperties = (
     agents: Record<string, IAgent>,
@@ -28,6 +37,17 @@ export const setAgentProperties = (
         ...agents[username],
         ...newValue,
     };
+};
+
+export const stopAgent = async (
+    agents: Record<string, IAgent>,
+    username: string
+): Promise<IMessage> => {
+    if (username in agents) {
+        await agents[username].browser.close();
+        delete agents[username];
+    }
+    return { code: 0, message: `Stopped agent ${username}` };
 };
 
 export const startAgent = async (
@@ -45,6 +65,19 @@ export const startAgent = async (
     }
     const browser = await puppeteer.launch({
         headless: headless ? "new" : false,
+        args: [
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--disable-setuid-sandbox",
+            "--no-first-run",
+            "--no-sandbox",
+            "--no-zygote",
+            "--deterministic-fetch",
+            "--disable-features=IsolateOrigins",
+            "--disable-site-isolation-trials",
+            "--start-in-incognito",
+            // '--single-process',
+        ],
         executablePath:
             process.env.NODE_ENV === "production"
                 ? process.env.PUPPETEER_EXECUTABLE_PATH
@@ -64,8 +97,8 @@ export const startAgent = async (
         await page.type("input[name=password]", account.password);
         await page.click("button[type=submit]");
         try {
-            await page.waitForXPath('//*[text()="Not Now"]');
-            const [saveInfoButton] = await page.$x('//*[text()="Not Now"]');
+            await page.waitForXPath('//*[text()="Not now"]');
+            const [saveInfoButton] = await page.$x('//*[text()="Not now"]');
             await (saveInfoButton as ElementHandle<Element>).click();
         } catch (_e) {}
         try {
@@ -188,30 +221,36 @@ export const postImages = async (
                     message: `Account not found.`,
                 };
             }
-            const userImagesDir = path.join(IMAGES_DIR, username);
+            fs.mkdirSync(IMAGES_DIR, { recursive: true });
             const count = randomIntegerBetween(
                 imagesPerPostLow,
                 imagesPerPostHigh
             );
-            const images = readdirSync(userImagesDir)
-                .filter(
-                    (name) =>
-                        account.postedImages.findIndex(
-                            (image) => image === name
-                        ) === -1
-                )
-                .map((name) => path.join(userImagesDir, name))
+            const imageNames = account.images
+                .filter((image) => !image.posted)
+                .map((image) => image.name)
                 .slice(0, Math.min(10, count));
-            if (images.length <= 0) {
+            if (imageNames.length <= 0) {
                 return {
                     code: 0,
                     message: `No images found.`,
                 };
             }
-            console.log("Trying to post", images);
+            console.log("Trying to post", imageNames);
+            const imagePaths = [];
+            for (const imageName of imageNames) {
+                const storePath = path.join(IMAGES_DIR, imageName + ".jpg");
+                const imageBuffer = await getImage(imageName);
+                if (imageBuffer) {
+                    fs.writeFileSync(storePath, imageBuffer);
+                    imagePaths.push(storePath);
+                }
+            }
             await page.goto("https://instagram.com");
             await page.waitForSelector('svg[aria-label="New post"]');
             await page.click('svg[aria-label="New post"]');
+            await page.waitForSelector('svg[aria-label="Post"]');
+            await page.click('svg[aria-label="Post"]');
             await page.waitForXPath(
                 "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'select from computer')]"
             );
@@ -222,7 +261,7 @@ export const postImages = async (
                 page.waitForFileChooser(),
                 (fileButton as any).click(),
             ]);
-            await fileChooser.accept(images);
+            await fileChooser.accept(imagePaths);
             await page.waitForXPath('//*[text()="Next"]');
             const [nextButton1] = await page.$x('//*[text()="Next"]');
             await (nextButton1 as any).click();
@@ -232,7 +271,7 @@ export const postImages = async (
             await page.waitForSelector("div[aria-label='Write a caption...'");
             await page.type(
                 "div[aria-label='Write a caption...'",
-                caption ? caption : await generateCaption(images.length > 1)
+                caption ? caption : await generateCaption(imagePaths.length > 1)
             );
             if (account.hashtags) {
                 await page.type(
@@ -246,10 +285,16 @@ export const postImages = async (
             await page.waitForXPath('//*[text()="Post shared"]');
             await page.click('svg[aria-label="Close"]');
             await editAccount(username, {
-                postedImages: [
-                    ...account.postedImages,
-                    ...images.map((imagePath) => path.basename(imagePath)),
-                ],
+                images: account.images.map((image) => {
+                    if (
+                        imageNames.findIndex((name) => name === image.name) ===
+                        -1
+                    ) {
+                        return image;
+                    } else {
+                        return { ...image, posted: true };
+                    }
+                }),
             });
             return {
                 code: 0,
@@ -322,12 +367,12 @@ export const postVideo = async (
                 (fileButton as any).click(),
             ]);
             const userVideosDir = path.join(VIDEOS_DIR, username);
-            const videos = readdirSync(userVideosDir)
+            const videos = fs
+                .readdirSync(userVideosDir)
                 .filter(
                     (name) =>
-                        account.postedVideos.findIndex(
-                            (video) => video === name
-                        ) === -1
+                        account.videos.findIndex((video) => video === name) ===
+                        -1
                 )
                 .map((name) => path.join(userVideosDir, name))
                 .slice(0, 1);
@@ -363,8 +408,8 @@ export const postVideo = async (
             await page.waitForXPath('//*[text()="Post shared"');
             await page.click('svg[aria-label="Close"]');
             await editAccount(username, {
-                postedVideos: [
-                    ...account.postedVideos,
+                videos: [
+                    ...account.videos,
                     ...videos.map((videoPath) => path.basename(videoPath)),
                 ],
             });
@@ -396,6 +441,7 @@ export const scrapePosts = async (
     agents: Record<string, IAgent>,
     username: string
 ): Promise<IMessage> => {
+    const logger = getLogger(username, "scrapePosts");
     try {
         if (!(username in agents)) {
             return {
@@ -413,6 +459,22 @@ export const scrapePosts = async (
     let scrapeCount = 0;
     if (status === AgentStatus.IDLE) {
         try {
+            const account = await findAccount({
+                username,
+            });
+            if (account === null) {
+                return {
+                    code: 1,
+                    message: `Account not found.`,
+                };
+            }
+            if (account.images.length > MAX_FOLDER_SIZE) {
+                await editAccount(username, {
+                    images: account.images.slice(
+                        account.images.length - MAX_FOLDER_SIZE
+                    ),
+                });
+            }
             setAgentProperties(agents, username, {
                 status: AgentStatus.SCRAPING,
             });
@@ -424,20 +486,12 @@ export const scrapePosts = async (
             }
             await sleep(5);
             const posts = await page.$$("article");
+            logger.info("Posts found - ", posts.length);
             for (const post of posts) {
-                const followButton = await post
-                    .$eval(
-                        'div:contains("Follow")',
-                        (button) => button.textContent
-                    )
-                    .catch(() => null);
-                const sponsoredSpan = await post
-                    .$eval(
-                        'span:contains("Sponsored")',
-                        (span) => span.textContent
-                    )
-                    .catch(() => null);
+                const followButton = await post.$("div::-p-text(Follow)");
+                const sponsoredSpan = await post.$("span::-p-text(Sponsored)");
                 if (followButton === null && sponsoredSpan === null) {
+                    logger.info("Looking for video...");
                     try {
                         const videoUrl = await post.$eval("video", (el) =>
                             el.getAttribute("src")
@@ -458,27 +512,42 @@ export const scrapePosts = async (
                             }
                         }
                     } catch (e) {
+                        logger.info("Video not found. Looking for image...");
                         try {
-                            const imageUrl = await post.$eval(
-                                'img[alt*="May be a meme"]',
-                                (el) => el.getAttribute("src")
+                            const [, image] = await post.$$("img");
+                            const imageUrl = await image.evaluate((tag) =>
+                                tag.getAttribute("src")
                             );
                             if (imageUrl) {
-                                const imagePath = path.join(
-                                    IMAGES_DIR,
-                                    username,
-                                    randomUUID() + ".jpg"
-                                );
-                                await downloadImage(imageUrl, imagePath);
-                                scrapeCount++;
+                                const imageBlob = await downloadImage(imageUrl);
+                                const imageName = randomUUID();
                                 if (
-                                    await matchesOldImage(imagePath, username)
+                                    !(await matchesAnyImage(
+                                        imageBlob,
+                                        account.images.map(
+                                            (image) => image.name
+                                        )
+                                    ))
                                 ) {
-                                    deleteFiles([imagePath]);
-                                    scrapeCount--;
+                                    await insertImage(imageName, imageBlob);
+                                    await editAccount(username, {
+                                        images: [
+                                            ...account.images,
+                                            { name: imageName, posted: false },
+                                        ],
+                                    });
+                                    logger.info("Image inserted");
+                                    scrapeCount++;
+                                } else {
+                                    logger.info("Image already exists.");
                                 }
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            logger.info(
+                                "Image not found. Skipping to next article.",
+                                e
+                            );
+                        }
                     }
                 }
             }

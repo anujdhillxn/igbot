@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { IText, Language, TextType } from "../types/model";
 
-const textSchema = new mongoose.Schema({
+const textSchema: mongoose.Schema<IText> = new mongoose.Schema({
     content: {
         type: String,
         required: true,

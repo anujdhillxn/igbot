@@ -7,6 +7,7 @@ import {
     scrapePosts,
     startAgent,
     startFollowing,
+    stopAgent,
 } from "../services/agent";
 import { findAccount } from "../services/account";
 
@@ -27,6 +28,18 @@ router.get("/status/:username", async (req: Request, res: Response) => {
                 };
             }),
         });
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post("/stop", async (req: Request, res: Response) => {
+    try {
+        const { message } = await stopAgent(
+            req.app.locals.agents,
+            req.body.username
+        );
+        res.status(200).json(message);
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }

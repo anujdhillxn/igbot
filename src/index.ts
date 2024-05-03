@@ -5,6 +5,7 @@ import { DEV_DATABASE_URL, DEV_PORT } from "./config";
 import {
     accountsRouter,
     agentsRouter,
+    imagesRouter,
     jobsRouter,
     textsRouter,
 } from "./routes";
@@ -25,6 +26,7 @@ app.use("/accounts", accountsRouter);
 app.use("/agents", agentsRouter);
 app.use("/jobs", jobsRouter);
 app.use("/texts", textsRouter);
+app.use("/images", imagesRouter);
 app.locals.agents = {};
 app.listen(port, async () => {
     console.log(`Server running on port ${port}`);

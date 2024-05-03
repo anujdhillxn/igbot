@@ -33,11 +33,11 @@ export const editAccount = async (
     if (newInfo.active !== undefined) {
         account.active = newInfo.active;
     }
-    if (newInfo.postedImages !== undefined) {
-        account.postedImages = newInfo.postedImages;
+    if (newInfo.images !== undefined) {
+        account.images = newInfo.images;
     }
-    if (newInfo.postedVideos !== undefined) {
-        account.postedVideos = newInfo.postedVideos;
+    if (newInfo.videos !== undefined) {
+        account.videos = newInfo.videos;
     }
     if (newInfo.hashtags !== undefined) {
         account.hashtags = newInfo.hashtags;
