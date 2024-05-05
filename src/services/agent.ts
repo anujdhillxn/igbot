@@ -67,6 +67,7 @@ export const createNewMonitor = async (
                 break;
             case "move":
                 page.mouse.move(x, y);
+                break;
         }
     });
     client.on("Page.screencastFrame", async ({ data, sessionId }) => {
@@ -144,27 +145,27 @@ export const startAgent = async (
     });
     try {
         await installMouseHelper(page);
-        await page.goto("https://codeforces.com");
-        // await page.goto("https://instagram.com");
-        // await page.waitForSelector("input[name=username]");
-        // await page.type("input[name=username]", username);
-        // await page.type("input[name=password]", account.password);
-        // await page.click("button[type=submit]");
-        // try {
-        //     await page.waitForXPath('//*[text()="Not now"]');
-        //     const [saveInfoButton] = await page.$x('//*[text()="Not now"]');
-        //     await (saveInfoButton as ElementHandle<Element>).click();
-        // } catch (_e) {}
-        // try {
-        //     await page.waitForXPath('//*[text()="Not Now"]');
-        //     const [turnNotifButton] = await page.$x('//*[text()="Not Now"]');
-        //     await (turnNotifButton as ElementHandle<Element>).click();
-        // } catch (_e) {}
-        // try {
-        //     await page.waitForXPath('//*[text()="Not Now"]');
-        //     const [turnNotifButton] = await page.$x('//*[text()="Not Now"]');
-        //     await (turnNotifButton as ElementHandle<Element>).click();
-        // } catch (_e) {}
+        // await page.goto("https://codeforces.com");
+        await page.goto("https://instagram.com");
+        await page.waitForSelector("input[name=username]");
+        await page.type("input[name=username]", username);
+        await page.type("input[name=password]", account.password);
+        await page.click("button[type=submit]");
+        try {
+            await page.waitForXPath('//*[text()="Not now"]');
+            const [saveInfoButton] = await page.$x('//*[text()="Not now"]');
+            await (saveInfoButton as ElementHandle<Element>).click();
+        } catch (_e) {}
+        try {
+            await page.waitForXPath('//*[text()="Not Now"]');
+            const [turnNotifButton] = await page.$x('//*[text()="Not Now"]');
+            await (turnNotifButton as ElementHandle<Element>).click();
+        } catch (_e) {}
+        try {
+            await page.waitForXPath('//*[text()="Not Now"]');
+            const [turnNotifButton] = await page.$x('//*[text()="Not Now"]');
+            await (turnNotifButton as ElementHandle<Element>).click();
+        } catch (_e) {}
         return { code: 0, message: "Agent started." };
     } catch (e) {
         console.log(e);
