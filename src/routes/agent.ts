@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { IAccount } from "../types/model";
 import Account from "../models/account";
 import {
+    createNewMonitor,
     getSnapshot,
     postImages,
     postVideo,

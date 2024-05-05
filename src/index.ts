@@ -1,4 +1,6 @@
 import express from "express";
+import WebSocket from "ws";
+import http from "http";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import { DEV_DATABASE_URL, DEV_PORT } from "./config";
@@ -9,7 +11,7 @@ import {
     jobsRouter,
     textsRouter,
 } from "./routes";
-
+import { instantiateWebSocketServer } from "./services/webSocket";
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -27,7 +29,12 @@ app.use("/agents", agentsRouter);
 app.use("/jobs", jobsRouter);
 app.use("/texts", textsRouter);
 app.use("/images", imagesRouter);
+
+const server = http.createServer(app);
+
 app.locals.agents = {};
-app.listen(port, async () => {
+instantiateWebSocketServer(server, app.locals.agents);
+
+server.listen(port, async () => {
     console.log(`Server running on port ${port}`);
 });

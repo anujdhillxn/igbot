@@ -1,6 +1,6 @@
-import { IAccount } from "./model";
 import * as puppeteer from "puppeteer";
-
+import * as ws from "ws";
+import * as http from "http";
 declare global {
     namespace Express {
         // These open interfaces may be extended in an application-specific manner via declaration merging.

@@ -27,6 +27,7 @@ import {
     matchesAnyImage,
 } from "./image";
 import { getLogger } from "./logger";
+import { Server, WebSocket } from "ws";
 
 export const setAgentProperties = (
     agents: Record<string, IAgent>,
@@ -36,6 +37,50 @@ export const setAgentProperties = (
     agents[username] = {
         ...agents[username],
         ...newValue,
+    };
+};
+
+export const createNewMonitor = async (
+    agents: Record<string, IAgent>,
+    ws: WebSocket,
+    username: string
+) => {
+    try {
+        if (!(username in agents)) {
+            console.log(`Agent ${username} is not active.`);
+            return;
+        }
+    } catch (e) {
+        console.log(`Agent ${username} is not active.`);
+        return;
+    }
+    const [page] = await agents[username].browser.pages();
+    const client = await page.target().createCDPSession();
+    const pathName = `/monitor/${username}`;
+    console.log(`A client connected to ${pathName}`);
+    ws.on("message", (data: string) => {
+        const { x, y } = JSON.parse(data);
+        page.mouse.click(x, y);
+    });
+    client.on("Page.screencastFrame", async ({ data, sessionId }) => {
+        ws.send(data);
+        client.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+    });
+
+    client.send("Page.startScreencast", {
+        format: "jpeg",
+        quality: 100,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        everyNthFrame: 1,
+    });
+    ws.on("close", () => {
+        console.log(`A client disconnected from ${pathName}`);
+        client.send("Page.stopScreencast");
+    });
+    return {
+        code: 0,
+        message: `Agent ${username}'s monitor started.`,
     };
 };
 
@@ -204,11 +249,8 @@ export const postImages = async (
     if (status === AgentStatus.IDLE) {
         try {
             const [page] = await browser.pages();
-            try {
-                await page.goto("https://instagram.com");
-            } catch (e) {
-                await startAgent(agents, username, headless);
-            }
+
+            await page.goto("https://instagram.com");
             setAgentProperties(agents, username, {
                 status: AgentStatus.POSTING,
             });
@@ -479,11 +521,7 @@ export const scrapePosts = async (
                 status: AgentStatus.SCRAPING,
             });
             const [page] = await browser.pages();
-            try {
-                await page.goto("https://instagram.com");
-            } catch (e) {
-                await startAgent(agents, username, headless);
-            }
+            await page.goto("https://instagram.com");
             await sleep(5);
             const posts = await page.$$("article");
             logger.info("Posts found - ", posts.length);
