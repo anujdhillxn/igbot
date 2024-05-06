@@ -157,6 +157,7 @@ export const startAgent = async (
             "--disable-site-isolation-trials",
             "--start-in-incognito",
             // '--single-process',
+            `--window-size=${width},${height}`,
         ],
         executablePath:
             process.env.NODE_ENV === "production"
