@@ -69,7 +69,7 @@ export const createNewMonitor = async (
                 page.mouse.move(x, y);
                 break;
             case "scroll":
-                page.mouse.wheel({ deltaY: y });
+                page.mouse.wheel({ deltaY: y, deltaX: x });
         }
     });
     client.on("Page.screencastFrame", async ({ data, sessionId }) => {
@@ -140,8 +140,8 @@ export const startAgent = async (
     });
     const [page] = await browser.pages();
     await page.setViewport({
-        width: 1255,
-        height: 800,
+        width: 300,
+        height: 300,
     });
     setAgentProperties(agents, username, {
         browser,
