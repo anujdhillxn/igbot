@@ -71,7 +71,7 @@ export const installMouseHelper = async (page: Page) => {
               pointer-events: none;
               position: absolute;
               top: 0;
-              z-index: 10000;
+              z-index: 99999999999999999;
               left: 0;
               width: 20px;
               height: 20px;
