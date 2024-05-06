@@ -105,10 +105,35 @@ export const stopAgent = async (
     return { code: 0, message: `Stopped agent ${username}` };
 };
 
+export const changePageSize = async (
+    agents: Record<string, IAgent>,
+    username: string,
+    width: number,
+    height: number
+): Promise<IMessage> => {
+    const account = await findAccount({ username });
+    if (account === null) {
+        return { code: 1, message: "Account not found." };
+    }
+    if (username in agents) {
+        if (agents[username].status !== AgentStatus.ERROR)
+            return { code: 0, message: "Agent running already." };
+    }
+    const { browser } = agents[username];
+    const [page] = await browser.pages();
+    await page.setViewport({
+        width,
+        height,
+    });
+    return { code: 0, message: "Viewport set successfully." };
+};
+
 export const startAgent = async (
     agents: Record<string, IAgent>,
     username: string,
-    headless: boolean
+    headless: boolean,
+    width: number,
+    height: number
 ): Promise<IMessage> => {
     const account = await findAccount({ username });
     if (account === null) {
@@ -140,8 +165,8 @@ export const startAgent = async (
     });
     const [page] = await browser.pages();
     await page.setViewport({
-        width: 300,
-        height: 300,
+        width,
+        height,
     });
     setAgentProperties(agents, username, {
         browser,

@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { IAccount } from "../types/model";
 import Account from "../models/account";
 import {
+    changePageSize,
     createNewMonitor,
     getSnapshot,
     postImages,
@@ -52,7 +53,23 @@ router.post("/start", async (req: Request, res: Response) => {
         const { message } = await startAgent(
             req.app.locals.agents,
             req.body.username,
-            req.body.headless
+            req.body.headless,
+            req.body.width,
+            req.body.height
+        );
+        res.status(200).json(message);
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post("/changePageSize", async (req: Request, res: Response) => {
+    try {
+        const { message } = await changePageSize(
+            req.app.locals.agents,
+            req.body.username,
+            req.body.width,
+            req.body.height
         );
         res.status(200).json(message);
     } catch (err: any) {
