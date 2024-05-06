@@ -68,6 +68,8 @@ export const createNewMonitor = async (
             case "move":
                 page.mouse.move(x, y);
                 break;
+            case "scroll":
+                page.mouse.wheel({ deltaY: y });
         }
     });
     client.on("Page.screencastFrame", async ({ data, sessionId }) => {
@@ -78,8 +80,8 @@ export const createNewMonitor = async (
     client.send("Page.startScreencast", {
         format: "jpeg",
         quality: 100,
-        maxWidth: 1920,
-        maxHeight: 1080,
+        maxWidth: 1255,
+        maxHeight: 800,
         everyNthFrame: 1,
     });
     ws.on("close", () => {
@@ -137,6 +139,10 @@ export const startAgent = async (
                 : puppeteer.executablePath(),
     });
     const [page] = await browser.pages();
+    await page.setViewport({
+        width: 1255,
+        height: 800,
+    });
     setAgentProperties(agents, username, {
         browser,
         status: AgentStatus.STARTING,
@@ -145,7 +151,7 @@ export const startAgent = async (
     });
     try {
         await installMouseHelper(page);
-        // await page.goto("https://codeforces.com");
+        //await page.goto("https://codeforces.com");
         await page.goto("https://instagram.com");
         await page.waitForSelector("input[name=username]");
         await page.type("input[name=username]", username);
