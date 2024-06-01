@@ -80,8 +80,6 @@ export const createNewMonitor = async (
     client.send("Page.startScreencast", {
         format: "jpeg",
         quality: 100,
-        maxWidth: 1255,
-        maxHeight: 800,
         everyNthFrame: 1,
     });
     ws.on("close", () => {
@@ -144,7 +142,7 @@ export const startAgent = async (
             return { code: 0, message: "Agent running already." };
     }
     const browser = await puppeteer.launch({
-        headless: headless ? "new" : false,
+        headless,
         args: [
             "--disable-gpu",
             "--disable-dev-shm-usage",
@@ -159,6 +157,10 @@ export const startAgent = async (
             // '--single-process',
             `--window-size=${width},${height}`,
         ],
+        defaultViewport: {
+            width,
+            height,
+        },
         executablePath:
             process.env.NODE_ENV === "production"
                 ? process.env.PUPPETEER_EXECUTABLE_PATH
@@ -652,21 +654,4 @@ export const scrapePosts = async (
             message: `Agent ${username} is not idle.`,
         };
     }
-};
-
-export const getSnapshot = async (
-    agents: Record<string, IAgent>,
-    username: string
-): Promise<Buffer> => {
-    try {
-        if (!(username in agents)) {
-            return Buffer.from("");
-        }
-    } catch (e) {
-        return Buffer.from("");
-    }
-    const { browser } = agents[username];
-    const [page] = await browser.pages();
-    const snapshot = await page.screenshot();
-    return snapshot;
 };
